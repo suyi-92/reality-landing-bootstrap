@@ -22,6 +22,57 @@ install_xray_if_needed() {
   [[ -n "$(xray_bin)" ]] || die "Xray 安装后仍找不到 xray 可执行文件。"
 }
 
+x25519_output_field() {
+  local output="$1" wanted="$2"
+  awk -v wanted="$wanted" '
+    function trim(s) {
+      sub(/^[[:space:]]+/, "", s)
+      sub(/[[:space:]]+$/, "", s)
+      return s
+    }
+    {
+      key = $0
+      sub(/:.*/, "", key)
+      key = tolower(key)
+      gsub(/[ _-]/, "", key)
+      value = $0
+      sub(/^[^:]*:[[:space:]]*/, "", value)
+      value = trim(value)
+      if (wanted == "private" && key == "privatekey") {
+        print value
+        found = 1
+        exit
+      }
+      if (wanted == "public" && key == "publickey") {
+        print value
+        found = 1
+        exit
+      }
+      if (wanted == "public" && key == "password" && fallback == "") {
+        fallback = value
+      }
+    }
+    END {
+      if (!found && wanted == "public" && fallback != "") {
+        print fallback
+      }
+    }
+  ' <<<"$output"
+}
+
+log_redacted_x25519_output() {
+  local output="$1" line key
+  log "xray x25519 输出脱敏摘要："
+  while IFS= read -r line; do
+    if [[ "$line" == *:* ]]; then
+      key="${line%%:*}"
+      log "  ${key}: <redacted>"
+    elif [[ -n "$line" ]]; then
+      log "  $line"
+    fi
+  done <<<"$output"
+}
+
 ensure_reality_keys() {
   local bin output private public
   bin="$(xray_bin)"
@@ -30,10 +81,16 @@ ensure_reality_keys() {
     if is_dry_run; then
       log "DRY-RUN: xray x25519 > Reality keypair"
     else
-      output="$("$bin" x25519)"
-      private="$(awk -F': ' '/Private key:/ {print $2}' <<<"$output")"
-      public="$(awk -F': ' '/Public key:/ {print $2}' <<<"$output")"
-      [[ -n "$private" && -n "$public" ]] || die "xray x25519 输出无法解析。"
+      if ! output="$("$bin" x25519 2>&1)"; then
+        log_redacted_x25519_output "$output"
+        die "xray x25519 执行失败。"
+      fi
+      private="$(x25519_output_field "$output" private)"
+      public="$(x25519_output_field "$output" public)"
+      if [[ -z "$private" || -z "$public" ]]; then
+        log_redacted_x25519_output "$output"
+        die "xray x25519 输出无法解析；已兼容 Private key/Public key 和 PrivateKey/Password 格式。"
+      fi
       umask 077
       printf '%s\n' "$private" >"$REALITY_PRIVATE_KEY_PATH"
       printf '%s\n' "$public" >"$REALITY_PUBLIC_KEY_PATH"
