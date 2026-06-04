@@ -1,0 +1,8 @@
+# landing-clients.csv
+# 每行一个中转鸡入口。listen_port 和 uuid 可留空。
+# 第一条空 listen_port 默认使用 443，后续空 listen_port 从 EXTRA_PORT_START 起自动分配。
+# allowed_sources 用分号分隔，支持 IPv4/IPv6/CIDR。
+tag,listen_port,allowed_sources,uuid,server_name,flow
+relay-sj,,1.2.3.4,,www.microsoft.com,xtls-rprx-vision
+relay-jp,,2001:db8::10/128,,www.microsoft.com,xtls-rprx-vision
+relay-us,51045,5.6.7.8;2001:db8::20/128,,www.microsoft.com,xtls-rprx-vision
