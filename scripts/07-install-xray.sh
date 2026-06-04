@@ -30,6 +30,7 @@ import sys
 
 wanted = sys.argv[1]
 text = sys.stdin.read()
+text = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", text)
 pattern = re.compile(r"(Private\s*key|Public\s*key|PrivateKey|PublicKey|Password|Hash32)\s*:\s*", re.I)
 matches = list(pattern.finditer(text))
 fields = {}
@@ -49,6 +50,58 @@ elif wanted == "public":
 ' "$wanted"
 }
 
+hex_to_base64url() {
+  local hex="$1"
+  python3 -c '
+import base64
+import sys
+
+raw = bytes.fromhex(sys.argv[1])
+print(base64.urlsafe_b64encode(raw).decode().rstrip("="))
+' "$hex"
+}
+
+openssl_x25519_keypair() {
+  local key_file text private_hex public_hex private public
+  key_file="$(mktemp)"
+  if ! openssl genpkey -algorithm X25519 -out "$key_file" >>"$LOG_FILE" 2>&1; then
+    rm -f "$key_file"
+    return 1
+  fi
+  if ! text="$(openssl pkey -in "$key_file" -text -noout 2>>"$LOG_FILE")"; then
+    rm -f "$key_file"
+    return 1
+  fi
+  rm -f "$key_file"
+  private_hex="$(printf '%s\n' "$text" | awk '
+    /^[[:space:]]*priv:/ { section = "private"; next }
+    /^[[:space:]]*pub:/ { section = "public"; next }
+    /^[[:space:]]*[0-9a-fA-F][0-9a-fA-F](:[0-9a-fA-F][0-9a-fA-F])+/ {
+      line = $0
+      gsub(/[[:space:]:]/, "", line)
+      if (section == "private") private = private line
+      if (section == "public") public = public line
+    }
+    END { print private }
+  ')"
+  public_hex="$(printf '%s\n' "$text" | awk '
+    /^[[:space:]]*priv:/ { section = "private"; next }
+    /^[[:space:]]*pub:/ { section = "public"; next }
+    /^[[:space:]]*[0-9a-fA-F][0-9a-fA-F](:[0-9a-fA-F][0-9a-fA-F])+/ {
+      line = $0
+      gsub(/[[:space:]:]/, "", line)
+      if (section == "private") private = private line
+      if (section == "public") public = public line
+    }
+    END { print public }
+  ')"
+  [[ ${#private_hex} -eq 64 && ${#public_hex} -eq 64 ]] || return 1
+  private="$(hex_to_base64url "$private_hex")"
+  public="$(hex_to_base64url "$public_hex")"
+  [[ -n "$private" && -n "$public" ]] || return 1
+  printf '%s\n%s\n' "$private" "$public"
+}
+
 log_redacted_x25519_output() {
   local output="$1" line key
   log "xray x25519 输出脱敏摘要："
@@ -64,6 +117,7 @@ log_redacted_x25519_output() {
 
 ensure_reality_keys() {
   local bin output private public
+  local -a keypair
   bin="$(xray_bin)"
   mkdir -p "$RLB_STATE_DIR"
   if [[ "$RESET_REALITY_KEYS" == "true" || ! -s "$REALITY_PRIVATE_KEY_PATH" || ! -s "$REALITY_PUBLIC_KEY_PATH" ]]; then
@@ -78,7 +132,13 @@ ensure_reality_keys() {
       public="$(x25519_output_field "$output" public)"
       if [[ -z "$private" || -z "$public" ]]; then
         log_redacted_x25519_output "$output"
-        die "xray x25519 输出无法解析；已兼容 Private key/Public key 和 PrivateKey/Password 格式。"
+        info "xray x25519 输出无法解析，改用 OpenSSL 生成 X25519 keypair。"
+        if ! mapfile -t keypair < <(openssl_x25519_keypair); then
+          die "xray x25519 输出无法解析，且 OpenSSL X25519 keypair 生成失败。"
+        fi
+        private="${keypair[0]:-}"
+        public="${keypair[1]:-}"
+        [[ -n "$private" && -n "$public" ]] || die "OpenSSL X25519 keypair 输出无法解析。"
       fi
       umask 077
       printf '%s\n' "$private" >"$REALITY_PRIVATE_KEY_PATH"
