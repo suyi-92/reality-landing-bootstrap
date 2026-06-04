@@ -90,12 +90,17 @@ ensure_project() {
 read_default() {
   local prompt="$1" default_value="$2" value
   if [[ -n "$default_value" ]]; then
-    printf '%s [%s]: ' "$prompt" "$default_value" >"$INPUT_TTY"
+    if [[ "$INPUT_TTY" == "/dev/tty" || -t 0 ]]; then
+      IFS= read -e -i "$default_value" -r -p "${prompt}: " value <"$INPUT_TTY" || true
+    else
+      printf '%b' "${BOLD}${prompt}${RESET} ${DIM}[默认: ${default_value}]${RESET}: " >"$INPUT_TTY"
+      IFS= read -r value <"$INPUT_TTY" || true
+      value="${value:-$default_value}"
+    fi
   else
-    printf '%s: ' "$prompt" >"$INPUT_TTY"
+    printf '%b' "${BOLD}${prompt}${RESET}: " >"$INPUT_TTY"
+    IFS= read -r value <"$INPUT_TTY" || true
   fi
-  IFS= read -r value <"$INPUT_TTY" || true
-  [[ -n "$value" ]] || value="$default_value"
   printf '%s\n' "$value"
 }
 
