@@ -35,10 +35,18 @@ if systemctl list-unit-files xray.service >/dev/null 2>&1; then
   run systemctl stop xray
 fi
 
+if is_dry_run; then
+  log "DRY-RUN: remove reality-landing-bootstrap xray service override"
+else
+  rm -f /etc/systemd/system/xray.service.d/99-reality-landing-bootstrap.conf
+  systemctl daemon-reload >>"$LOG_FILE" 2>&1 || true
+fi
+
 cat <<EOF
 
 回滚完成：
   - 已移除本项目 SSH hardening drop-in。
   - 已删除带 reality-landing-bootstrap 注释的 UFW 规则。
+  - 已移除本项目 Xray systemd override。
   - 已停止 xray 服务。
 EOF

@@ -179,6 +179,12 @@ RestartPreventExitStatus=23
 [Install]
 WantedBy=multi-user.target
 EOF
+  write_root_file /etc/systemd/system/xray.service.d/99-reality-landing-bootstrap.conf 0644 <<EOF
+[Service]
+User=root
+ExecStart=
+ExecStart=$bin run -config $XRAY_CONFIG_PATH
+EOF
 }
 
 install_xray_if_needed
