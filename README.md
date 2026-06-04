@@ -88,6 +88,64 @@ vless://UUID@你的服务器域名或IP:端口?type=tcp&security=reality&flow=xt
 
 把对应链接放进中转鸡项目的 `upstream-nodes.txt`，即可让中转鸡某个入口端口转发到这台落地鸡。
 
+## 后续新增中转鸡
+
+已经部署好的落地鸡不需要重装。新增一台中转鸡时，只需要在落地鸡上追加一行客户端配置，然后重生成 Xray、UFW 和链接：
+
+```bash
+cd /opt/reality-landing-bootstrap
+nano landing-clients.csv
+```
+
+追加一行，`allowed_sources` 填新中转鸡的公网 IP/CIDR；`listen_port` 和 `uuid` 可以留空：
+
+```csv
+relay-new,,中转鸡公网IP,,www.microsoft.com,xtls-rprx-vision
+```
+
+如果同一台中转鸡有 IPv4 和 IPv6，使用分号分隔：
+
+```csv
+relay-new,,1.2.3.4;2001:db8::10/128,,www.microsoft.com,xtls-rprx-vision
+```
+
+保存后执行：
+
+```bash
+sudo bash bootstrap.sh --phase xray
+sudo bash bootstrap.sh --phase firewall
+sudo bash bootstrap.sh --phase validate
+sudo bash bootstrap.sh --phase output-links
+```
+
+取出这台中转鸡专属链接：
+
+```bash
+sudo cat /etc/reality-landing-bootstrap/links/relay-new.txt
+```
+
+然后到对应中转鸡项目，把这条 `vless://...` 链接加入 `upstream-nodes.txt`：
+
+```bash
+cd /opt/reality-relay-bootstrap
+nano upstream-nodes.txt
+```
+
+中转鸡侧追加示例：
+
+```csv
+landing-new,vless://UUID@landing.example.com:443?type=tcp&security=reality&flow=xtls-rprx-vision&fp=chrome&sni=www.microsoft.com&pbk=PUBLIC_KEY&sid=SHORT_ID&spx=%2F#landing-vps-relay-new,
+```
+
+保存后在中转鸡执行：
+
+```bash
+sudo bash bootstrap.sh --phase singbox
+sudo bash bootstrap.sh --phase firewall
+sudo bash bootstrap.sh --phase validate
+sudo bash bootstrap.sh --phase output-nodes
+```
+
 ## 安全边界
 
 本项目通过“独立端口 + UFW 来源白名单 + 独立 UUID”隔离中转鸡。UFW 负责限制来源 IP，Xray 负责认证 UUID。不要把 `landing-clients.csv`、Reality 私钥或输出链接提交到公开仓库。
