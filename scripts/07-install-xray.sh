@@ -46,7 +46,7 @@ if wanted == "private":
     print(fields.get("privatekey", ""))
 elif wanted == "public":
     print(fields.get("publickey") or fields.get("password", ""))
-'
+' "$wanted"
 }
 
 log_redacted_x25519_output() {
