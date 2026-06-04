@@ -109,7 +109,6 @@ load_config() {
   : "${REALITY_SERVER_NAME:=www.microsoft.com}"
   : "${REALITY_DEST:=www.microsoft.com:443}"
   : "${CLIENT_PORT_START:=51043}"
-  : "${EXTRA_PORT_START:=51043}"
   : "${ENABLE_UFW:=true}"
   : "${ENABLE_FAIL2BAN:=true}"
   : "${ENABLE_IPV6_LISTEN:=false}"
@@ -147,7 +146,6 @@ validate_config_basics() {
   [[ -n "$SERVER_DOMAIN" || -n "$SERVER_IP_IPV4" || -n "$SERVER_IP_IPV6" ]] || die "SERVER_DOMAIN/SERVER_IP_IPV4/SERVER_IP_IPV6 至少填写一个"
   validate_port SSH_PORT
   validate_port CLIENT_PORT_START
-  validate_port EXTRA_PORT_START
   validate_bool ENABLE_UFW
   validate_bool ENABLE_FAIL2BAN
   validate_bool ENABLE_IPV6_LISTEN

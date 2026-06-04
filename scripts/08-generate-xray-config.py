@@ -55,7 +55,6 @@ def defaults(env: Dict[str, str]) -> Dict[str, str]:
         "REALITY_SERVER_NAME": "www.microsoft.com",
         "REALITY_DEST": "www.microsoft.com:443",
         "CLIENT_PORT_START": "51043",
-        "EXTRA_PORT_START": "51043",
         "ENABLE_UFW": "true",
         "ENABLE_FAIL2BAN": "true",
         "ENABLE_IPV6_LISTEN": "false",
@@ -112,11 +111,9 @@ def validate_env(env: Dict[str, str]) -> None:
         raise ConfigError("SERVER_ALIAS 不能为空")
     if not (env["SERVER_DOMAIN"].strip() or env["SERVER_IP_IPV4"].strip() or env["SERVER_IP_IPV6"].strip()):
         raise ConfigError("SERVER_DOMAIN、SERVER_IP_IPV4、SERVER_IP_IPV6 至少填写一个")
-    for key in ["REALITY_SERVER_NAME"]:
-        validate_domain(env[key], key)
+    validate_domain(env["REALITY_SERVER_NAME"], "REALITY_SERVER_NAME")
     as_port(env, "SSH_PORT")
     as_port(env, "CLIENT_PORT_START")
-    as_port(env, "EXTRA_PORT_START")
     for key in ["ENABLE_UFW", "ENABLE_FAIL2BAN", "ENABLE_IPV6_LISTEN", "RESET_REALITY_KEYS", "RESET_CLIENT_UUIDS"]:
         as_bool(env, key)
     if env.get("DEFAULT_FLOW", "") not in {"", "xtls-rprx-vision"}:
@@ -163,17 +160,11 @@ def save_uuid_state(env: Dict[str, str], state: Dict[str, str]) -> None:
     os.chmod(path, 0o600)
 
 
-def next_extra_port(start: int, used: set[int]) -> int:
+def next_client_port(start: int, used: set[int]) -> int:
     for port in range(start, 65536):
         if port not in used:
             return port
     raise ConfigError("没有可用客户端入口端口")
-
-
-def choose_empty_port(index: int, client_start: int, extra_start: int, used: set[int]) -> int:
-    if index == 0 and client_start not in used:
-        return client_start
-    return next_extra_port(extra_start, used)
 
 
 def load_clients(env: Dict[str, str], base: Path, *, persist_uuids: bool) -> List[Dict[str, Any]]:
@@ -191,12 +182,10 @@ def load_clients(env: Dict[str, str], base: Path, *, persist_uuids: bool) -> Lis
         raise ConfigError("landing-clients.csv 表头缺少字段：" + ", ".join(sorted(missing)))
 
     client_start = as_port(env, "CLIENT_PORT_START")
-    extra_start = as_port(env, "EXTRA_PORT_START")
     uuid_state = load_uuid_state(env)
     used_tags: set[str] = set()
     used_ports: set[int] = set()
     rows: List[Dict[str, Any]] = []
-    auto_index = 0
 
     for lineno, row in enumerate(reader, start=2):
         normalized = {key: (value or "").strip() for key, value in row.items()}
@@ -214,8 +203,7 @@ def load_clients(env: Dict[str, str], base: Path, *, persist_uuids: bool) -> Lis
                 raise ConfigError(f"landing-clients.csv 第 {lineno} 行 listen_port 必须是数字或留空")
             listen_port = int(normalized["listen_port"])
         else:
-            listen_port = choose_empty_port(auto_index, client_start, extra_start, used_ports)
-            auto_index += 1
+            listen_port = next_client_port(client_start, used_ports)
         if not 1 <= listen_port <= 65535:
             raise ConfigError(f"landing-clients.csv 第 {lineno} 行 listen_port 超出范围：{listen_port}")
         if listen_port in used_ports:
