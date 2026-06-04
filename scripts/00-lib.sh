@@ -162,8 +162,8 @@ require_supported_os() {
   # shellcheck disable=SC1091
   source /etc/os-release
   case "${ID:-}:${VERSION_ID:-}" in
-    ubuntu:22.04|ubuntu:24.04|debian:12|debian:13) info "系统受支持：${PRETTY_NAME:-$ID $VERSION_ID}" ;;
-    *) die "当前系统未列入默认支持范围：${PRETTY_NAME:-unknown}；支持 Ubuntu 22.04/24.04、Debian 12/13。" ;;
+    ubuntu:22.04|ubuntu:24.04|debian:11|debian:12|debian:13) info "系统受支持：${PRETTY_NAME:-$ID $VERSION_ID}" ;;
+    *) die "当前系统未列入默认支持范围：${PRETTY_NAME:-unknown}；支持 Ubuntu 22.04/24.04、Debian 11/12/13。" ;;
   esac
 }
 

@@ -2,6 +2,8 @@
 
 这是一个无面板、配置驱动的落地鸡配置项目，用来把一台 Debian/Ubuntu VPS 配成 **Xray VLESS + Reality 落地服务器**。
 
+支持系统：Debian GNU/Linux 11/12/13、Ubuntu 22.04/24.04。
+
 它和 `reality-relay-bootstrap` 的关系：
 
 - `reality-relay-bootstrap`：配置中转鸡，多入口转发到不同出口。

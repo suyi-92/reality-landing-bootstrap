@@ -2,6 +2,8 @@
 
 `reality-landing-bootstrap` 是落地鸡配置器：它在落地 VPS 上安装 Xray，生成 VLESS + Reality 多入口配置，并为每个中转鸡输出一条专属 `vless://` 链接。
 
+支持系统：Debian GNU/Linux 11/12/13、Ubuntu 22.04/24.04。
+
 ## 阶段
 
 ```text
