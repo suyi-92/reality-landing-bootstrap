@@ -246,6 +246,7 @@ run_flow() {
   bash bootstrap.sh --phase ssh-phase1
   line
   printf '%b\n' "${YELLOW}${BOLD}安全确认：不要关闭当前 SSH 窗口。${RESET}"
+  printf '\n'
   printf '请另开一个终端确认 root 公钥登录成功：\n'
   local host="$server_domain"
   [[ -n "$host" ]] || host="$server_ip_ipv4"
@@ -265,7 +266,7 @@ run_flow() {
   bash bootstrap.sh --phase output-links
   line
   printf '%b\n' "${GREEN}${BOLD}部署完成。链接文件：${RESET}"
-  printf '  sudo cat /root/reality-landing-bootstrap-links.txt\n'
+  printf '  sudo cat /root/reality-landing-bootstrap-links.txt\n\n'
 }
 
 banner

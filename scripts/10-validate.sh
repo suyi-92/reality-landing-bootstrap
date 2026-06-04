@@ -57,15 +57,6 @@ dump_xray_diagnostics() {
   } >>"$LOG_FILE" 2>&1
 }
 
-tcp_url_host() {
-  local host="$1"
-  if [[ "$host" == *:* && "$host" != \[*\] ]]; then
-    printf '[%s]\n' "$host"
-  else
-    printf '%s\n' "$host"
-  fi
-}
-
 info "检查 Xray 配置语法。"
 run "$bin" run -test -config "$XRAY_CONFIG_PATH"
 
@@ -92,7 +83,7 @@ cat <<EOF
 验证完成。建议在中转鸡 Debian/Linux 上测试：
 $(for host in $(server_hosts); do
   for port in "${PORTS[@]}"; do
-    printf '  curl -v --connect-timeout 5 --max-time 5 telnet://%s:%s </dev/null\n' "$(tcp_url_host "$host")" "$port"
+    printf "  python3 -c 'import socket,sys; s=socket.create_connection((sys.argv[1], int(sys.argv[2])), 5); s.close(); print(\"TCP OK\")' %q %q\n" "$host" "$port"
   done
 done)
 EOF

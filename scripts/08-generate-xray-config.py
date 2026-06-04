@@ -351,6 +351,7 @@ def output_links(env: Dict[str, str], clients: List[Dict[str, Any]]) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(all_links) + "\n", encoding="utf-8")
     os.chmod(out, 0o600)
+    print()
     print(f"已生成链接文件：{out}")
     print(f"已生成单客户端链接目录：{links_dir}")
 
