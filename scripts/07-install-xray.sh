@@ -24,40 +24,29 @@ install_xray_if_needed() {
 
 x25519_output_field() {
   local output="$1" wanted="$2"
-  awk -v wanted="$wanted" '
-    function trim(s) {
-      sub(/^[[:space:]]+/, "", s)
-      sub(/[[:space:]]+$/, "", s)
-      return s
-    }
-    {
-      key = $0
-      sub(/:.*/, "", key)
-      key = tolower(key)
-      gsub(/[ _-]/, "", key)
-      value = $0
-      sub(/^[^:]*:[[:space:]]*/, "", value)
-      value = trim(value)
-      if (wanted == "private" && key == "privatekey") {
-        print value
-        found = 1
-        exit
-      }
-      if (wanted == "public" && key == "publickey") {
-        print value
-        found = 1
-        exit
-      }
-      if (wanted == "public" && key == "password" && fallback == "") {
-        fallback = value
-      }
-    }
-    END {
-      if (!found && wanted == "public" && fallback != "") {
-        print fallback
-      }
-    }
-  ' <<<"$output"
+  printf '%s\n' "$output" | python3 -c '
+import re
+import sys
+
+wanted = sys.argv[1]
+text = sys.stdin.read()
+pattern = re.compile(r"(Private\s*key|Public\s*key|PrivateKey|PublicKey|Password|Hash32)\s*:\s*", re.I)
+matches = list(pattern.finditer(text))
+fields = {}
+for index, match in enumerate(matches):
+    raw_key = re.sub(r"[\s_-]+", "", match.group(1).lower())
+    start = match.end()
+    end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+    raw_value = text[start:end].strip()
+    value = raw_value.split()[0].strip(chr(34) + chr(39)) if raw_value else ""
+    if value and raw_key not in fields:
+        fields[raw_key] = value
+
+if wanted == "private":
+    print(fields.get("privatekey", ""))
+elif wanted == "public":
+    print(fields.get("publickey") or fields.get("password", ""))
+'
 }
 
 log_redacted_x25519_output() {

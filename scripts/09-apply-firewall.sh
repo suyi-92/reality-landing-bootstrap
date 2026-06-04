@@ -17,19 +17,14 @@ cleanup_project_rules() {
   local stale_file number
   stale_file="$(mktemp)"
   if command -v ufw >/dev/null 2>&1; then
-    ufw status numbered 2>/dev/null | python3 - >"$stale_file" <<'PY'
-import re
-import sys
-nums = []
-for line in sys.stdin:
-    if "reality-landing-bootstrap" not in line:
-        continue
-    match = re.search(r"^\[\s*(\d+)\]", line)
-    if match:
-        nums.append(int(match.group(1)))
-for num in sorted(set(nums), reverse=True):
-    print(num)
-PY
+    ufw status numbered 2>/dev/null |
+      awk '/reality-landing-bootstrap/ {
+        line = $0
+        sub(/^\[[[:space:]]*/, "", line)
+        sub(/\].*/, "", line)
+        if (line ~ /^[0-9]+$/) print line
+      }' |
+      sort -rn -u >"$stale_file"
   fi
   if [[ -s "$stale_file" ]]; then
     info "清理旧的本项目 UFW 规则。"

@@ -16,19 +16,14 @@ fi
 
 if command -v ufw >/dev/null 2>&1; then
   stale_file="$(mktemp)"
-  ufw status numbered 2>/dev/null | python3 - >"$stale_file" <<'PY'
-import re
-import sys
-nums = []
-for line in sys.stdin:
-    if "reality-landing-bootstrap" not in line:
-        continue
-    match = re.search(r"^\[\s*(\d+)\]", line)
-    if match:
-        nums.append(int(match.group(1)))
-for num in sorted(set(nums), reverse=True):
-    print(num)
-PY
+  ufw status numbered 2>/dev/null |
+    awk '/reality-landing-bootstrap/ {
+      line = $0
+      sub(/^\[[[:space:]]*/, "", line)
+      sub(/\].*/, "", line)
+      if (line ~ /^[0-9]+$/) print line
+    }' |
+    sort -rn -u >"$stale_file"
   while IFS= read -r number; do
     [[ -n "$number" ]] || continue
     run ufw --force delete "$number"
