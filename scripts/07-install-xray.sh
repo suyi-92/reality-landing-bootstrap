@@ -31,11 +31,11 @@ import sys
 wanted = sys.argv[1]
 text = sys.stdin.read()
 text = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", text)
-pattern = re.compile(r"(Private\s*key|Public\s*key|PrivateKey|PublicKey|Password|Hash32)\s*:\s*", re.I)
+pattern = re.compile(r"(Private\s*key|Public\s*key|PrivateKey|PublicKey|Password(?:\s*\([^)]*\))?|Hash32)\s*:\s*", re.I)
 matches = list(pattern.finditer(text))
 fields = {}
 for index, match in enumerate(matches):
-    raw_key = re.sub(r"[\s_-]+", "", match.group(1).lower())
+    raw_key = re.sub(r"[^a-z0-9]+", "", match.group(1).lower())
     start = match.end()
     end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
     raw_value = text[start:end].strip()
@@ -43,11 +43,32 @@ for index, match in enumerate(matches):
     if value and raw_key not in fields:
         fields[raw_key] = value
 
+def first_key(*prefixes):
+    for key, value in fields.items():
+        if any(key.startswith(prefix) for prefix in prefixes):
+            return value
+    return ""
+
 if wanted == "private":
-    print(fields.get("privatekey", ""))
+    print(first_key("privatekey"))
 elif wanted == "public":
-    print(fields.get("publickey") or fields.get("password", ""))
+    print(first_key("publickey", "password"))
 ' "$wanted"
+}
+
+derive_xray_public_key() {
+  local private="$1" bin output public
+  bin="$(xray_bin)"
+  if ! output="$("$bin" x25519 -i "$private" 2>&1)"; then
+    log_redacted_x25519_output "$output"
+    return 1
+  fi
+  public="$(x25519_output_field "$output" public)"
+  if [[ -z "$public" ]]; then
+    log_redacted_x25519_output "$output"
+    return 1
+  fi
+  printf '%s\n' "$public"
 }
 
 hex_to_base64url() {
@@ -116,7 +137,7 @@ log_redacted_x25519_output() {
 }
 
 ensure_reality_keys() {
-  local bin output private public
+  local bin output private public current_public derived_public
   local -a keypair
   bin="$(xray_bin)"
   mkdir -p "$RLB_STATE_DIR"
@@ -140,6 +161,11 @@ ensure_reality_keys() {
         public="${keypair[1]:-}"
         [[ -n "$private" && -n "$public" ]] || die "OpenSSL X25519 keypair 输出无法解析。"
       fi
+      if derived_public="$(derive_xray_public_key "$private")"; then
+        public="$derived_public"
+      else
+        warn "无法用 Xray 从 Reality private key 推导 public key，将使用已生成的 public key。"
+      fi
       umask 077
       printf '%s\n' "$private" >"$REALITY_PRIVATE_KEY_PATH"
       printf '%s\n' "$public" >"$REALITY_PUBLIC_KEY_PATH"
@@ -154,6 +180,17 @@ ensure_reality_keys() {
     fi
   fi
   if ! is_dry_run; then
+    private="$(<"$REALITY_PRIVATE_KEY_PATH")"
+    if derived_public="$(derive_xray_public_key "$private")"; then
+      current_public="$(cat "$REALITY_PUBLIC_KEY_PATH" 2>/dev/null || true)"
+      if [[ "$current_public" != "$derived_public" ]]; then
+        info "Reality public key 与 private key 不一致，已按 private key 重新校准。"
+        umask 077
+        printf '%s\n' "$derived_public" >"$REALITY_PUBLIC_KEY_PATH"
+      fi
+    else
+      warn "无法校验 Reality public key 与 private key 是否匹配。"
+    fi
     chmod 600 "$REALITY_PRIVATE_KEY_PATH" "$REALITY_PUBLIC_KEY_PATH" "$REALITY_SHORT_ID_PATH"
   fi
 }
