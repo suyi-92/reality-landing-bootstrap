@@ -104,6 +104,20 @@ read_default() {
   printf '%s\n' "$value"
 }
 
+read_yes_no() {
+  local prompt="$1" value suffix="Y/n"
+  while true; do
+    printf '%b' "${BOLD}${prompt}${RESET} ${DIM}[${suffix}]${RESET}: " >"$INPUT_TTY"
+    IFS= read -r value <"$INPUT_TTY" || true
+    [[ -z "$value" ]] && return 0
+    case "$value" in
+      y|Y|yes|YES|Yes) return 0 ;;
+      n|N|no|NO|No) return 1 ;;
+      *) warn "请输入 yes 或 no。" ;;
+    esac
+  done
+}
+
 read_bool() {
   local prompt="$1" default_value="$2" value
   while true; do
@@ -153,19 +167,16 @@ collect_pubkeys() {
 }
 
 collect_clients() {
-  local out="$1" index=1 more
+  local out="$1" index=1
   : >"$out"
   printf 'tag,listen_port,allowed_sources,uuid,server_name,flow\n' >"$out"
   line
   printf '%b\n' "${CYAN}${BOLD}中转鸡访问配置${RESET}"
   printf '%b\n' "${DIM}每一行会生成一个落地入口端口；allowed_sources 用分号分隔中转鸡 IP/CIDR。${RESET}"
   while true; do
-    if (( index == 1 )); then
-      more="true"
-    else
-      more="$(read_bool "是否继续添加第 ${index} 个中转鸡？" "false")"
+    if (( index > 1 )) && ! read_yes_no "是否继续添加第 ${index} 个中转鸡？"; then
+      break
     fi
-    [[ "$more" == "true" ]] || break
     local tag listen_port allowed_sources client_uuid server_name flow
     tag="$(read_default "  tag" "relay-$(printf '%02d' "$index")")"
     listen_port="$(read_default "  listen_port (留空自动分配)" "")"
@@ -241,7 +252,7 @@ run_flow() {
   [[ -n "$host" ]] || host="$server_ip_ipv6"
   printf '  ssh -p %s -o PreferredAuthentications=publickey -o PasswordAuthentication=no root@%s\n' "$ssh_port" "$host"
   printf '  whoami\n\n'
-  if [[ "$(read_bool "我已确认 root 公钥登录正常，继续 SSH final 加固？" "false")" == "true" ]]; then
+  if read_yes_no "我已确认 root 公钥登录正常，继续 SSH final 加固？"; then
     CONFIRM_ROOT_KEY_LOGIN=yes bash bootstrap.sh --phase ssh-final
   else
     warn "已暂停在 ssh-phase1。之后可手动执行：sudo CONFIRM_ROOT_KEY_LOGIN=yes bash bootstrap.sh --phase ssh-final"
