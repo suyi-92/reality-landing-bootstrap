@@ -41,6 +41,20 @@ relay-jp,51043,9.9.9.9;2001:db8::10/128,,www.microsoft.com,xtls-rprx-vision
 
 ## 标准执行
 
+全新服务器推荐直接远程一键执行：
+
+```bash
+bash <(wget -qO- https://raw.githubusercontent.com/suyi-92/reality-landing-bootstrap/main/install.sh)
+```
+
+脚本会把项目安装/更新到 `/opt/reality-landing-bootstrap`。如果已经 clone 到本地，也可以在项目目录执行：
+
+```bash
+sudo bash install.sh
+```
+
+分阶段执行流程如下：
+
 ```bash
 sudo bash bootstrap.sh --phase preflight
 sudo bash bootstrap.sh --phase ssh-phase1

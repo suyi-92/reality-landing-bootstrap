@@ -1,10 +1,24 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_URL="${RLB_REPO_URL:-https://github.com/suyi-92/reality-landing-bootstrap.git}"
+INSTALL_DIR="${RLB_INSTALL_DIR:-/opt/reality-landing-bootstrap}"
+DEFAULT_BRANCH="${RLB_BRANCH:-main}"
 RUN_PHASES="${RLB_RUN_PHASES:-true}"
-INPUT_TTY="/dev/tty"
-[[ -r "$INPUT_TTY" ]] || INPUT_TTY="/dev/stdin"
+RLB_VERBOSE="${RLB_VERBOSE:-false}"
+INSTALL_LOG_FILE="${RLB_INSTALL_LOG_FILE:-/tmp/reality-landing-bootstrap-install.log}"
+export RLB_VERBOSE
+
+if [[ -n "${RLB_INPUT_TTY:-}" ]]; then
+  INPUT_TTY="$RLB_INPUT_TTY"
+elif [[ -r /dev/tty ]]; then
+  INPUT_TTY="/dev/tty"
+elif [[ -t 0 ]]; then
+  INPUT_TTY="/dev/stdin"
+else
+  echo "ERROR: 需要交互式终端来填写配置。" >&2
+  exit 1
+fi
 
 RED=$'\033[31m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; CYAN=$'\033[36m'; BOLD=$'\033[1m'; DIM=$'\033[2m'; RESET=$'\033[0m'
 
@@ -13,16 +27,65 @@ info() { printf '%b\n' "${CYAN}INFO${RESET} $*" >&2; }
 warn() { printf '%b\n' "${YELLOW}WARN${RESET} $*" >&2; }
 die() { printf '%b\n' "${RED}ERROR${RESET} $*" >&2; exit 1; }
 
-clear || true
-cat <<'EOF'
+clear_screen() {
+  if [[ -t 1 ]]; then
+    if command -v clear >/dev/null 2>&1; then
+      clear 2>/dev/null || printf '\033[2J\033[H'
+    else
+      printf '\033[2J\033[H'
+    fi
+  fi
+}
+
+run_logged() {
+  if [[ "$RLB_VERBOSE" == "true" ]]; then
+    "$@"
+  else
+    "$@" >>"$INSTALL_LOG_FILE" 2>&1
+  fi
+}
+
+banner() {
+  clear_screen
+  printf '%b\n' "${CYAN}${BOLD}"
+  cat <<'EOF'
 ╭────────────────────────────────────────────────╮
 │            Reality Landing Bootstrap           │
 │        Xray VLESS + Reality landing VPS        │
 ╰────────────────────────────────────────────────╯
 EOF
+  printf '%b' "${RESET}"
+}
 
 [[ ${EUID:-$(id -u)} -eq 0 ]] || die "请使用 root 运行：sudo bash install.sh"
-cd "$PROJECT_DIR"
+
+ensure_project() {
+  local self_dir
+  self_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" 2>/dev/null && pwd -P || true)"
+  if [[ -n "$self_dir" && -f "$self_dir/bootstrap.sh" && -f "$self_dir/config.example.env" ]]; then
+    printf '%s\n' "$self_dir"
+    return 0
+  fi
+
+  info "当前是一键远程执行模式，将项目安装到：$INSTALL_DIR"
+  if ! command -v git >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+    info "安装 git/curl 基础依赖。"
+    local apt_log="/tmp/reality-landing-bootstrap-install-apt.log"
+    apt-get update -y >"$apt_log" 2>&1 || { tail -n 40 "$apt_log" >&2 || true; die "apt-get update 失败。"; }
+    DEBIAN_FRONTEND=noninteractive apt-get install -y git curl ca-certificates >>"$apt_log" 2>&1 || { tail -n 60 "$apt_log" >&2 || true; die "安装 git/curl 失败。"; }
+  fi
+
+  if [[ -d "$INSTALL_DIR/.git" ]]; then
+    info "检测到已有项目目录，拉取最新代码。"
+    run_logged git -C "$INSTALL_DIR" fetch --all --prune
+    run_logged git -C "$INSTALL_DIR" checkout "$DEFAULT_BRANCH"
+    run_logged git -C "$INSTALL_DIR" pull --ff-only
+  else
+    mkdir -p "$(dirname "$INSTALL_DIR")"
+    run_logged git clone --branch "$DEFAULT_BRANCH" "$REPO_URL" "$INSTALL_DIR"
+  fi
+  printf '%s\n' "$INSTALL_DIR"
+}
 
 read_default() {
   local prompt="$1" default_value="$2" value
@@ -188,6 +251,10 @@ run_flow() {
   printf '%b\n' "${GREEN}${BOLD}部署完成。链接文件：${RESET}"
   printf '  sudo cat /root/reality-landing-bootstrap-links.txt\n'
 }
+
+banner
+PROJECT_DIR="$(ensure_project)"
+cd "$PROJECT_DIR"
 
 line
 printf '%b\n' "${CYAN}${BOLD}基础信息${RESET}"

@@ -40,7 +40,13 @@ sudo bash bootstrap.sh --phase validate
 sudo bash bootstrap.sh --phase output-links
 ```
 
-也可以使用交互式一键脚本：
+全新服务器可以直接使用远程一键脚本。它会把项目安装/更新到 `/opt/reality-landing-bootstrap`，然后进入交互配置：
+
+```bash
+bash <(wget -qO- https://raw.githubusercontent.com/suyi-92/reality-landing-bootstrap/main/install.sh)
+```
+
+如果已经下载了本仓库，也可以使用本地交互式一键脚本：
 
 ```bash
 sudo bash install.sh
