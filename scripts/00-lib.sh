@@ -108,7 +108,7 @@ load_config() {
 
   : "${REALITY_SERVER_NAME:=www.microsoft.com}"
   : "${REALITY_DEST:=www.microsoft.com:443}"
-  : "${CLIENT_PORT_START:=443}"
+  : "${CLIENT_PORT_START:=51043}"
   : "${EXTRA_PORT_START:=51043}"
   : "${ENABLE_UFW:=true}"
   : "${ENABLE_FAIL2BAN:=true}"

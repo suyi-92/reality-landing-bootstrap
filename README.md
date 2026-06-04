@@ -69,7 +69,7 @@ tag,listen_port,allowed_sources,uuid,server_name,flow
 - `server_name`：Reality 伪装域名，空则使用 `REALITY_SERVER_NAME`。
 - `flow`：默认 `xtls-rprx-vision`。
 
-端口分配规则：第一条空 `listen_port` 默认使用 `443`，后续空端口从 `EXTRA_PORT_START=51043` 起自动分配。
+端口分配规则：空 `listen_port` 默认从 `CLIENT_PORT_START=51043` 起自动分配，避免默认占用 `443`。
 
 ## 输出链接
 
@@ -134,7 +134,7 @@ nano upstream-nodes.txt
 中转鸡侧追加示例：
 
 ```csv
-landing-new,vless://UUID@landing.example.com:443?type=tcp&security=reality&flow=xtls-rprx-vision&fp=chrome&sni=www.microsoft.com&pbk=PUBLIC_KEY&sid=SHORT_ID&spx=%2F#landing-vps-relay-new,
+landing-new,vless://UUID@landing.example.com:51043?type=tcp&security=reality&flow=xtls-rprx-vision&fp=chrome&sni=www.microsoft.com&pbk=PUBLIC_KEY&sid=SHORT_ID&spx=%2F#landing-vps-relay-new,
 ```
 
 保存后在中转鸡执行：

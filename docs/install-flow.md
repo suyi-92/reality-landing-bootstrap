@@ -9,7 +9,7 @@ cp landing-clients.example.csv landing-clients.csv
 nano landing-clients.csv
 ```
 
-`landing-clients.csv` 每行一个中转鸡入口。第一条空端口默认 `443`，后续空端口从 `EXTRA_PORT_START` 起分配。
+`landing-clients.csv` 每行一个中转鸡入口。空端口默认从 `CLIENT_PORT_START=51043` 起分配，避免默认占用 `443`。
 
 ## 2. SSH 初始化与加固
 

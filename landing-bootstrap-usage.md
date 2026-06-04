@@ -27,7 +27,7 @@ SERVER_IP_IPV4="1.2.3.4"
 SSH_PORT="22"
 ADMIN_PUBKEY="ssh-ed25519 AAAA..."
 REALITY_SERVER_NAME="www.microsoft.com"
-CLIENT_PORT_START="443"
+CLIENT_PORT_START="51043"
 EXTRA_PORT_START="51043"
 ```
 
@@ -36,7 +36,7 @@ EXTRA_PORT_START="51043"
 ```csv
 tag,listen_port,allowed_sources,uuid,server_name,flow
 relay-sj,,8.8.8.8,,www.microsoft.com,xtls-rprx-vision
-relay-jp,51043,9.9.9.9;2001:db8::10/128,,www.microsoft.com,xtls-rprx-vision
+relay-jp,51044,9.9.9.9;2001:db8::10/128,,www.microsoft.com,xtls-rprx-vision
 ```
 
 `allowed_sources` 必须填写中转鸡公网 IP 或 CIDR。这样落地鸡的每个端口只接受指定中转鸡访问。
@@ -80,5 +80,5 @@ sudo cat /etc/reality-landing-bootstrap/links/relay-sj.txt
 
 ```csv
 tag,node_url,listen_port
-landing-sj,vless://UUID@landing.example.com:443?type=tcp&security=reality&flow=xtls-rprx-vision&fp=chrome&sni=www.microsoft.com&pbk=PUBLIC_KEY&sid=SHORT_ID&spx=%2F#landing-vps-relay-sj,
+landing-sj,vless://UUID@landing.example.com:51043?type=tcp&security=reality&flow=xtls-rprx-vision&fp=chrome&sni=www.microsoft.com&pbk=PUBLIC_KEY&sid=SHORT_ID&spx=%2F#landing-vps-relay-sj,
 ```
