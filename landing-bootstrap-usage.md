@@ -75,6 +75,13 @@ sudo bash bootstrap.sh --phase output-links
 sudo cat /etc/reality-landing-bootstrap/links/relay-sj.txt
 ```
 
+文件名来自 `landing-clients.csv` 的 `tag` 字段，例如 `tag=relay-sj` 才会生成 `relay-sj.txt`。如果不确定实际 tag，先执行：
+
+```bash
+sudo ls -l /etc/reality-landing-bootstrap/links/
+sudo cat /root/reality-landing-bootstrap-links.txt
+```
+
 把该链接放到中转鸡项目的 `upstream-nodes.txt`：
 
 ```csv

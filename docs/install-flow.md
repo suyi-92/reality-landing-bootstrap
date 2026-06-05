@@ -63,4 +63,7 @@ sudo bash bootstrap.sh --phase output-links
 
 ```bash
 sudo cat /root/reality-landing-bootstrap-links.txt
+sudo ls -l /etc/reality-landing-bootstrap/links/
 ```
+
+单客户端链接文件名等于 `landing-clients.csv` 的 `tag`，例如 `tag=relay-sj` 对应 `/etc/reality-landing-bootstrap/links/relay-sj.txt`。

@@ -329,12 +329,14 @@ def output_links(env: Dict[str, str], clients: List[Dict[str, Any]]) -> None:
     links_dir = Path(env["LINKS_DIR"])
     links_dir.mkdir(parents=True, exist_ok=True)
     all_links = []
+    link_files = []
     for client in clients:
         link = build_link(env, client)
         all_links.append(link)
         path = links_dir / f"{client['tag']}.txt"
         path.write_text(link + "\n", encoding="utf-8")
         os.chmod(path, 0o600)
+        link_files.append((client["tag"], path))
     out = Path(env["LINKS_OUT"])
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text("\n".join(all_links) + "\n", encoding="utf-8")
@@ -342,6 +344,9 @@ def output_links(env: Dict[str, str], clients: List[Dict[str, Any]]) -> None:
     print()
     print(f"已生成链接文件：{out}")
     print(f"已生成单客户端链接目录：{links_dir}")
+    print("单客户端链接文件：")
+    for tag, path in link_files:
+        print(f"  {tag} -> {path}")
 
 
 def main() -> int:

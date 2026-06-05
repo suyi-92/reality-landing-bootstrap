@@ -124,6 +124,13 @@ sudo bash bootstrap.sh --phase output-links
 sudo cat /etc/reality-landing-bootstrap/links/relay-new.txt
 ```
 
+这里的 `relay-new` 必须和 `landing-clients.csv` 第一列 `tag` 完全一致；如果你的 tag 是 `relay-01`，文件就是 `/etc/reality-landing-bootstrap/links/relay-01.txt`。不确定实际文件名时先查看：
+
+```bash
+sudo ls -l /etc/reality-landing-bootstrap/links/
+sudo cat /root/reality-landing-bootstrap-links.txt
+```
+
 然后到对应中转鸡项目，把这条 `vless://...` 链接加入 `upstream-nodes.txt`：
 
 ```bash
